@@ -1,0 +1,83 @@
+<App>
+  <Include src="./functions.rsx" />
+  <Include src="./src/detailPane.rsx" />
+  <Frame
+    id="$main"
+    isHiddenOnDesktop={false}
+    isHiddenOnMobile={false}
+    padding="8px 12px"
+    paddingType="normal"
+    sticky={false}
+    type="main"
+  >
+    <Text
+      id="pageTitle"
+      marginType="normal"
+      value="### Customers"
+      verticalAlign="center"
+    />
+    <Table
+      id="customersTable"
+      cellSelection="none"
+      data="{{ selectCustomers.data }}"
+      defaultSelectedRow={{ mode: "index", indexType: "display", index: 0 }}
+      heightType="auto"
+      primaryKeyColumnId="c01a1"
+      rowHeight="medium"
+      rowSelection="single"
+      searchMode="caseInsensitive"
+      showBorder={true}
+      showFooter={true}
+      showHeader={true}
+      templatePageSize={20}
+    >
+      <Column
+        id="c01a1"
+        alignment="left"
+        editable={false}
+        format="string"
+        key="id"
+        label="ID"
+        position="center"
+        size={60}
+      />
+      <Column
+        id="c02b2"
+        alignment="left"
+        format="string"
+        key="name"
+        label="Name"
+        position="center"
+        size={180}
+      />
+      <Column
+        id="c03c3"
+        alignment="left"
+        format="string"
+        key="email"
+        label="Email"
+        position="center"
+        size={220}
+      />
+      <Column
+        id="c04d4"
+        alignment="left"
+        format="tag"
+        formatOptions={{ automaticColors: true }}
+        key="status"
+        label="Status"
+        position="center"
+        size={100}
+      />
+      <Column
+        id="c05e5"
+        alignment="left"
+        format="datetime"
+        key="created_at"
+        label="Joined"
+        position="center"
+        size={140}
+      />
+    </Table>
+  </Frame>
+</App>

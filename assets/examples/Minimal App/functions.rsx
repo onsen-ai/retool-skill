@@ -1,0 +1,2 @@
+<GlobalFunctions>
+</GlobalFunctions>

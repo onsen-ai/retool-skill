@@ -1,0 +1,12 @@
+{
+  "pageTitle": {
+    "row": 0,
+    "height": 0.6,
+    "width": 12
+  },
+  "chatBox": {
+    "row": 1,
+    "height": 17.4,
+    "width": 12
+  }
+}

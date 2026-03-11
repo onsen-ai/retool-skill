@@ -1,0 +1,107 @@
+{
+  "pageTitle": {
+    "row": 0,
+    "height": 0.6,
+    "width": 10
+  },
+  "createModal": {
+    "row": 0,
+    "col": 10,
+    "height": 1,
+    "width": 2
+  },
+  "productsTable": {
+    "row": 1,
+    "height": 13.2,
+    "width": 12
+  },
+  "CreateProductForm": {
+    "container": "createModal",
+    "height": 0.2,
+    "width": 12
+  },
+  "createFormTitle": {
+    "container": "CreateProductForm",
+    "rowGroup": "header",
+    "height": 0.6,
+    "width": 12
+  },
+  "createName": {
+    "container": "CreateProductForm",
+    "height": 1,
+    "width": 12
+  },
+  "createDescription": {
+    "container": "CreateProductForm",
+    "row": 1,
+    "height": 1,
+    "width": 12
+  },
+  "createCategory": {
+    "container": "CreateProductForm",
+    "row": 2,
+    "height": 1,
+    "width": 12
+  },
+  "createClearBtn": {
+    "container": "CreateProductForm",
+    "rowGroup": "footer",
+    "col": 4,
+    "height": 1,
+    "width": 4
+  },
+  "createSubmitBtn": {
+    "container": "CreateProductForm",
+    "rowGroup": "footer",
+    "col": 8,
+    "height": 1,
+    "width": 4
+  },
+  "editModal": {
+    "row": 0,
+    "height": 1,
+    "width": 12
+  },
+  "editTitle": {
+    "rowGroup": "header",
+    "subcontainer": "editModal",
+    "height": 0.6,
+    "width": 12
+  },
+  "EditProductForm": {
+    "subcontainer": "editModal",
+    "height": 0.2,
+    "width": 12
+  },
+  "editName": {
+    "container": "EditProductForm",
+    "height": 1,
+    "width": 12
+  },
+  "editDescription": {
+    "container": "EditProductForm",
+    "row": 1,
+    "height": 1,
+    "width": 12
+  },
+  "editCategory": {
+    "container": "EditProductForm",
+    "row": 2,
+    "height": 1,
+    "width": 12
+  },
+  "editCancelBtn": {
+    "container": "EditProductForm",
+    "rowGroup": "footer",
+    "col": 4,
+    "height": 1,
+    "width": 4
+  },
+  "editSaveBtn": {
+    "container": "EditProductForm",
+    "rowGroup": "footer",
+    "col": 8,
+    "height": 1,
+    "width": 4
+  }
+}

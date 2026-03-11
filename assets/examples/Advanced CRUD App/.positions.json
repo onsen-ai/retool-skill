@@ -1,0 +1,177 @@
+{
+  "pageTitle": {
+    "row": 0,
+    "height": 0.6,
+    "width": 12
+  },
+  "searchInput": {
+    "row": 0.6,
+    "height": 1,
+    "width": 3
+  },
+  "departmentFilter": {
+    "row": 0.6,
+    "col": 3,
+    "height": 1,
+    "width": 2
+  },
+  "statusFilter": {
+    "row": 0.6,
+    "col": 5,
+    "height": 1,
+    "width": 2
+  },
+  "dateRangeFilter": {
+    "row": 0.6,
+    "col": 7,
+    "height": 1,
+    "width": 3
+  },
+  "resetBtn": {
+    "row": 0.6,
+    "col": 10,
+    "height": 1,
+    "width": 2
+  },
+  "membersTable": {
+    "row": 2,
+    "height": 13.2,
+    "width": 12
+  },
+  "detailContainer": {
+    "subcontainer": "detailPane",
+    "height": 0.2,
+    "width": 12
+  },
+  "detailTitle": {
+    "container": "detailContainer",
+    "rowGroup": "header",
+    "height": 0.6,
+    "width": 5
+  },
+  "detailTabs": {
+    "container": "detailContainer",
+    "rowGroup": "header",
+    "col": 5,
+    "height": 0.6,
+    "width": 5
+  },
+  "detailCloseBtn": {
+    "container": "detailContainer",
+    "rowGroup": "header",
+    "col": 11,
+    "height": 0.6,
+    "width": 1
+  },
+  "DetailForm": {
+    "container": "detailContainer",
+    "subcontainer": "detailsView",
+    "height": 0.2,
+    "width": 12
+  },
+  "detailName": {
+    "container": "DetailForm",
+    "height": 1,
+    "width": 12
+  },
+  "detailEmail": {
+    "container": "DetailForm",
+    "row": 1,
+    "height": 1,
+    "width": 12
+  },
+  "detailDepartment": {
+    "container": "DetailForm",
+    "row": 2,
+    "height": 1,
+    "width": 6
+  },
+  "detailRole": {
+    "container": "DetailForm",
+    "row": 2,
+    "col": 6,
+    "height": 1,
+    "width": 6
+  },
+  "detailStatus": {
+    "container": "DetailForm",
+    "row": 3,
+    "height": 1,
+    "width": 6
+  },
+  "detailJoinedDate": {
+    "container": "DetailForm",
+    "row": 3,
+    "col": 6,
+    "height": 1,
+    "width": 6
+  },
+  "detailNotes": {
+    "container": "DetailForm",
+    "row": 4,
+    "height": 1,
+    "width": 12
+  },
+  "detailSaveBtn": {
+    "container": "DetailForm",
+    "rowGroup": "footer",
+    "col": 6,
+    "height": 1,
+    "width": 6
+  },
+  "activityPlaceholder": {
+    "container": "detailContainer",
+    "subcontainer": "activityView",
+    "height": 2,
+    "width": 12
+  },
+  "confirmBulkUpdate": {
+    "row": 0,
+    "height": 1,
+    "width": 12
+  },
+  "bulkTitle": {
+    "subcontainer": "confirmBulkUpdate",
+    "rowGroup": "header",
+    "height": 0.6,
+    "width": 10
+  },
+  "bulkCloseBtn": {
+    "subcontainer": "confirmBulkUpdate",
+    "rowGroup": "header",
+    "col": 11,
+    "height": 0.6,
+    "width": 1
+  },
+  "bulkWarning": {
+    "subcontainer": "confirmBulkUpdate",
+    "height": 1,
+    "width": 12
+  },
+  "bulkMemberTags": {
+    "subcontainer": "confirmBulkUpdate",
+    "row": 1,
+    "height": 1,
+    "width": 12
+  },
+  "bulkFieldSummary": {
+    "subcontainer": "confirmBulkUpdate",
+    "row": 2,
+    "height": 1,
+    "width": 12
+  },
+  "bulkCancelBtn": {
+    "subcontainer": "confirmBulkUpdate",
+    "rowGroup": "footer",
+    "col": 6,
+    "height": 1,
+    "width": 3
+  },
+  "bulkConfirmBtn": {
+    "subcontainer": "confirmBulkUpdate",
+    "rowGroup": "footer",
+    "col": 9,
+    "height": 1,
+    "width": 3
+  }
+}

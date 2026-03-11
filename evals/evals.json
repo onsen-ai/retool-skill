@@ -1,0 +1,79 @@
+[
+  {
+    "name": "build-expense-manager",
+    "description": "Build a new Retool app from a description — tests NEW workflow with crud + master-detail patterns",
+    "prompt": "Build me a Retool app for managing employee expenses. I need a table showing all expense reports with columns: employee name, amount, category, status, and date. Users should be able to create new expenses via a modal form, edit existing ones in a side panel, and approve/reject by changing status. Output a zip I can import into Retool.",
+    "expected": {
+      "files": [
+        "main.rsx",
+        "functions.rsx",
+        "metadata.json",
+        ".positions.json"
+      ],
+      "components": [
+        "Table with 5+ columns (employee_name, amount, category, status, date)",
+        "Modal with Form for creating expenses",
+        "SplitPaneFrame detail pane for editing",
+        "Container with Tabs inside SplitPaneFrame",
+        "Form inside detail pane with initialData binding"
+      ],
+      "queries": [
+        "SELECT query for expenses",
+        "INSERT query with form binding",
+        "UPDATE_BY query with filterBy and success events",
+        "DELETE_BY query with requireConfirmation"
+      ],
+      "patterns": [
+        "Event chains: mutate → refresh → UI update",
+        "State variable for tracking context",
+        "Status change via Select with approve/reject options",
+        "All mutations have runWhenModelUpdates={false}"
+      ],
+      "validation": "validate_app.py passes with 0 FAIL",
+      "output": "zip file that can be imported into Retool"
+    }
+  },
+  {
+    "name": "add-search-filter",
+    "description": "Add features to an existing CRUD Table App — tests EDIT workflow with client-side filtering",
+    "prompt": "I have a CRUD Table App. Add a search bar and a status filter dropdown above the table. Use client-side setFilterStack filtering instead of SQL WHERE clauses.",
+    "input_dir": "assets/examples/CRUD Table App",
+    "expected": {
+      "new_components": [
+        "TextInput searchInput with search icon and debounced change event",
+        "Select statusFilter with static options and change event"
+      ],
+      "new_queries": [
+        "JavascriptQuery applyFilters that builds filter stack from widget values"
+      ],
+      "new_files": [
+        "lib/applyFilters.js"
+      ],
+      "positions": [
+        "searchInput and statusFilter on same row above table",
+        "col + width <= 12 for all entries"
+      ],
+      "validation": "validate_app.py passes with 0 FAIL",
+      "output": "modified app directory + zip"
+    }
+  },
+  {
+    "name": "improve-master-detail",
+    "description": "Improve an existing Master-Detail App — tests IMPROVE workflow with production patterns",
+    "prompt": "Review my Retool app and make it production-ready with best practices.",
+    "input_dir": "assets/examples/Master-Detail App",
+    "expected": {
+      "improvements": [
+        "Add requireConfirmation on destructive queries (if any DELETE exists)",
+        "Add loading/disableSubmit states on forms if missing",
+        "Add re-select row after update (selectRow event)",
+        "Add clearSelection after delete if delete exists",
+        "Consider SqlTransformQuery for dropdown options",
+        "Consider client-side setFilterStack for filtering"
+      ],
+      "audit": "Presents improvement checklist findings before making changes",
+      "validation": "validate_app.py passes with 0 FAIL",
+      "output": "improved app directory + zip"
+    }
+  }
+]
