@@ -132,7 +132,7 @@ Issues and PRs welcome. The most impactful contributions:
 
 ## Built by
 
-[Onsen](https://www.onsenapp.com) — built with AI agents, for AI agents.
+Built by the team at [Onsen](https://www.onsenapp.com) — an AI-powered mental health companion for journaling, emotional wellbeing, and personal growth.
 
 ## License
 
