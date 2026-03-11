@@ -16,22 +16,19 @@ This skill enables Claude to generate complete, importable Retool applications f
 
 ### As a Claude Code skill
 
-Add to your project's `.claude/settings.json`:
-
-```json
-{
-  "permissions": {
-    "allow": ["Bash(python3*)"]
-  },
-  "skills": ["path/to/retool-app-builder-skill"]
-}
-```
-
-Or install globally:
+Clone into your personal or project skills directory:
 
 ```bash
-claude skill add /path/to/retool-app-builder-skill
+# Personal (available in all projects)
+git clone https://github.com/onsen-ai/retool-app-builder-skill.git \
+  ~/.claude/skills/retool-app-builder
+
+# Or project-specific (checked into your repo)
+git clone https://github.com/onsen-ai/retool-app-builder-skill.git \
+  .claude/skills/retool-app-builder
 ```
+
+Claude Code discovers skills automatically from these locations — no configuration needed.
 
 ### Requirements
 
