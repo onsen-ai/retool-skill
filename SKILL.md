@@ -170,14 +170,23 @@ For when scripts aren't sufficient — the critical rules to follow:
 - Form requires `<Header>` + `<Body>` + `<Footer>` (all three; use `showHeader={false}` to hide)
 - Container requires at least one `<View>` direct child (not inside Body)
 - Table requires at least one `<Column>` child
+- **Never use `enableFullBleed={true}` on Containers inside SplitPaneFrame/DrawerFrame** — causes overflow
 
 ### Positioning
 - Every visible component needs a `.positions.json` entry
+- Omit `row` and `col` when they are 0 (zero is the default)
 - View is transparent — no position entry ever
 - `col + width <= 12`
 - Children inside a View use `container: parentContainerId` + `subcontainer: viewId`
 - Header/footer items use `rowGroup: "header"` or `rowGroup: "footer"`
 - ModalFrame children use `subcontainer: modalId`
+
+### Toolbar Layout
+When placing buttons alongside filter inputs (Select, DateRange, TextInput), buttons need special sizing to look right:
+- Add `heightType="auto"` to the Button RSX
+- In positions: use `height: 0.8` (not 1.0) and offset `row` by +0.2 from the filter row
+- **Ordering: filters → search → action buttons** (left to right)
+- Extract ModalFrame components (especially Setup Guide) to `src/` files via Include
 
 ### IDs
 - All IDs globally unique across all .rsx files
@@ -189,6 +198,15 @@ For when scripts aren't sufficient — the critical rules to follow:
 - Boolean: `{true}` not `"true"`
 - Expressions: `{{ widget.value }}`
 - Include: `{include("./lib/file.sql", "string")}`
+- **All SQL goes in lib/ files** — even one-liners. Never use inline `query="SELECT ..."`.
+
+### Attributes to Omit
+Don't include these — Retool strips them and they clutter the output:
+- `resourceDisplayName` on any query (cosmetic label, not used for import)
+- `transformer="return data"` on SELECT queries (it's the default)
+- `resourceDisplayName="JavascriptQuery"` and `runWhenModelUpdates={false}` on JavascriptQuery
+- `query=""` on RESTQuery (empty string is the default)
+- `hidden={false}`, `showFooter={false}` on any component (false is always the default)
 
 ### Mock Data
 
@@ -255,15 +273,15 @@ For deeper reference: read `references/TOOLSCRIPT-CHEATSHEET.md` or the full spe
 ### SELECT query one-liner
 ```jsx
 <SqlQueryUnified id="selectItems" query={include("./lib/selectItems.sql", "string")}
-  resourceDisplayName="your-database" resourceName="REPLACE_WITH_RESOURCE_UUID"
-  resourceTypeOverride="" transformer="return data" warningCodes={[]} />
+  resourceName="REPLACE_WITH_RESOURCE_UUID"
+  resourceTypeOverride="" warningCodes={[]} />
 ```
 
 ### INSERT one-liner
 ```jsx
 <SqlQueryUnified id="insertItem" actionType="INSERT" changesetIsObject={true}
   changesetObject="{{ { ...CreateForm.data } }}" editorMode="gui"
-  resourceDisplayName="your-database" resourceName="REPLACE_WITH_RESOURCE_UUID"
+  resourceName="REPLACE_WITH_RESOURCE_UUID"
   resourceTypeOverride="" runWhenModelUpdates={false} tableName="public.items">
   <Event id="hex8" event="success" method="trigger" pluginId="selectItems" type="datasource" waitMs="0" waitType="debounce" />
 </SqlQueryUnified>
@@ -273,16 +291,20 @@ For deeper reference: read `references/TOOLSCRIPT-CHEATSHEET.md` or the full spe
 ```jsx
 <SqlQueryUnified id="updateItem" actionType="UPDATE_BY" changesetIsObject={true}
   changesetObject="{{ { ...EditForm.data } }}" editorMode="gui"
-  filterBy={'[{"key":"id","value":"{{ table.selectedRow.id }}","operation":"="}]'}
-  resourceDisplayName="your-database" resourceName="REPLACE_WITH_RESOURCE_UUID"
+  filterBy={
+    '[{"key":"id","value":"{{ table.selectedRow.id }}","operation":"="}]'
+  }
+  resourceName="REPLACE_WITH_RESOURCE_UUID"
   resourceTypeOverride="" runWhenModelUpdates={false} tableName="public.items" />
 ```
 
 ### DELETE_BY one-liner
 ```jsx
 <SqlQueryUnified id="deleteItem" actionType="DELETE_BY" editorMode="gui"
-  filterBy={'[{"key":"id","value":"{{ table.selectedRow.id }}","operation":"="}]'}
+  filterBy={
+    '[{"key":"id","value":"{{ table.selectedRow.id }}","operation":"="}]'
+  }
   requireConfirmation={true} confirmationMessage="Delete **{{ table.selectedRow.name }}**?"
-  resourceDisplayName="your-database" resourceName="REPLACE_WITH_RESOURCE_UUID"
+  resourceName="REPLACE_WITH_RESOURCE_UUID"
   resourceTypeOverride="" runWhenModelUpdates={false} tableName="public.items" />
 ```

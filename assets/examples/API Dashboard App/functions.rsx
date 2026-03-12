@@ -105,7 +105,5 @@ return data"
   <JavascriptQuery
     id="applyFilters"
     query={include("./lib/applyFilters.js", "string")}
-    resourceDisplayName="JavascriptQuery"
-    runWhenModelUpdates={false}
   />
 </GlobalFunctions>

@@ -3,10 +3,8 @@
   <SqlQueryUnified
     id="selectProducts"
     query={include("./lib/selectProducts.sql", "string")}
-    resourceDisplayName="your-database"
     resourceName="REPLACE_WITH_RESOURCE_UUID"
     resourceTypeOverride=""
-    transformer="return data"
     warningCodes={[]}
   />
   <SqlQueryUnified
@@ -15,7 +13,6 @@
     changesetIsObject={true}
     changesetObject="{{ { ...CreateProductForm.data } }}"
     editorMode="gui"
-    resourceDisplayName="your-database"
     resourceName="REPLACE_WITH_RESOURCE_UUID"
     resourceTypeOverride=""
     runWhenModelUpdates={false}
@@ -49,7 +46,6 @@
     changesetObject="{{ { ...EditProductForm.data } }}"
     editorMode="gui"
     filterBy={'[{"key":"id","value":"{{ productsTable.selectedRow.id }}","operation":"="}]'}
-    resourceDisplayName="your-database"
     resourceName="REPLACE_WITH_RESOURCE_UUID"
     resourceTypeOverride=""
     runWhenModelUpdates={false}
@@ -93,7 +89,6 @@
     filterBy={'[{"key":"id","value":"{{ productsTable.selectedRow.id }}","operation":"="}]'}
     requireConfirmation={true}
     confirmationMessage="Are you sure you want to delete **{{ productsTable.selectedRow.name }}**?"
-    resourceDisplayName="your-database"
     resourceName="REPLACE_WITH_RESOURCE_UUID"
     resourceTypeOverride=""
     runWhenModelUpdates={false}

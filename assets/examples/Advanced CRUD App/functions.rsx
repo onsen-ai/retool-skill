@@ -5,10 +5,8 @@
   <SqlQueryUnified
     id="selectMembers"
     query={include("./lib/selectMembers.sql", "string")}
-    resourceDisplayName="your-database"
     resourceName="REPLACE_WITH_RESOURCE_UUID"
     resourceTypeOverride=""
-    transformer="return data"
     warningCodes={[]}
   />
 
@@ -16,7 +14,6 @@
     id="selectDepartments"
     query="SELECT DISTINCT department AS label, department AS value FROM {{ selectMembers.data }} ORDER BY department"
     resourceName="SQL Transforms"
-    transformer="return data"
   />
 
   <SqlQueryUnified
@@ -26,7 +23,6 @@
     changesetObject="{{ { ...DetailForm.data } }}"
     editorMode="gui"
     filterBy={'[{"key":"id","value":"{{ membersTable.selectedRow.id }}","operation":"="}]'}
-    resourceDisplayName="your-database"
     resourceName="REPLACE_WITH_RESOURCE_UUID"
     resourceTypeOverride=""
     runWhenModelUpdates={false}
@@ -60,7 +56,6 @@
     bulkUpdatePrimaryKey="id"
     editorMode="gui"
     records="{{ bulkUpdateData.value }}"
-    resourceDisplayName="your-database"
     resourceName="REPLACE_WITH_RESOURCE_UUID"
     resourceTypeOverride=""
     runWhenModelUpdates={false}
@@ -105,7 +100,6 @@
     filterBy={'[{"key":"id","value":"{{ membersTable.selectedRow.id }}","operation":"="}]'}
     requireConfirmation={true}
     confirmationMessage="Are you sure you want to remove **{{ membersTable.selectedRow.name }}** from the team?"
-    resourceDisplayName="your-database"
     resourceName="REPLACE_WITH_RESOURCE_UUID"
     resourceTypeOverride=""
     runWhenModelUpdates={false}
@@ -139,7 +133,6 @@
     bulkUpdatePrimaryKey="id"
     editorMode="gui"
     records="{{ membersTable.changesetArray }}"
-    resourceDisplayName="your-database"
     resourceName="REPLACE_WITH_RESOURCE_UUID"
     resourceTypeOverride=""
     runWhenModelUpdates={false}
@@ -160,14 +153,10 @@
   <JavascriptQuery
     id="applyFilters"
     query={include("./lib/applyFilters.js", "string")}
-    resourceDisplayName="JavascriptQuery"
-    runWhenModelUpdates={false}
   />
 
   <JavascriptQuery
     id="setBulkUpdateData"
     query={include("./lib/setBulkUpdateData.js", "string")}
-    resourceDisplayName="JavascriptQuery"
-    runWhenModelUpdates={false}
   />
 </GlobalFunctions>

@@ -3,10 +3,8 @@
   <SqlQueryUnified
     id="selectCustomers"
     query={include("./lib/selectCustomers.sql", "string")}
-    resourceDisplayName="your-database"
     resourceName="REPLACE_WITH_RESOURCE_UUID"
     resourceTypeOverride=""
-    transformer="return data"
     warningCodes={[]}
   />
   <SqlQueryUnified
@@ -16,7 +14,6 @@
     changesetObject="{{ { ...DetailForm.data } }}"
     editorMode="gui"
     filterBy={'[{"key":"id","value":"{{ customersTable.selectedRow.id }}","operation":"="}]'}
-    resourceDisplayName="your-database"
     resourceName="REPLACE_WITH_RESOURCE_UUID"
     resourceTypeOverride=""
     runWhenModelUpdates={false}

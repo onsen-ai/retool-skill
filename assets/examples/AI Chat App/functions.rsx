@@ -11,7 +11,6 @@
     bodyType="raw"
     headers={'[{"key":"Content-Type","value":"application/json"}]'}
     query="chat/completions"
-    resourceDisplayName="your-openai-resource"
     resourceName="REPLACE_WITH_RESOURCE_UUID"
     resourceTypeOverride=""
     type="POST"

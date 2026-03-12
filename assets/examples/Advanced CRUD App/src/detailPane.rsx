@@ -8,7 +8,6 @@
 >
   <Container
     id="detailContainer"
-    enableFullBleed={true}
     footerPadding="4px 12px"
     headerPadding="4px 12px"
     heightType="fixed"

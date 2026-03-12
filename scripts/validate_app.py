@@ -613,15 +613,8 @@ def validate_app(app_dir):
         if not resource_name:
             query_resource_errors.append(f"SqlQueryUnified id={q['id']} missing resourceName")
 
-    # JavascriptQuery should have resourceName (typically "JavascriptQuery")
-    js_queries = [c for c in all_components if c['tag'] == 'JavascriptQuery']
-    for q in js_queries:
-        resource_name = get_attr_value(q['attrs'], 'resourceName')
-        if not resource_name:
-            # Also accept resourceDisplayName as a fallback
-            resource_display = get_attr_value(q['attrs'], 'resourceDisplayName')
-            if not resource_display:
-                query_resource_errors.append(f"JavascriptQuery id={q['id']} missing resourceName")
+    # JavascriptQuery does NOT require resourceName — Retool infers it.
+    # (resourceDisplayName="JavascriptQuery" and runWhenModelUpdates={false} are also unnecessary.)
 
     # SqlTransformQuery should have resourceName
     sqlt_queries = [c for c in all_components if c['tag'] == 'SqlTransformQuery']

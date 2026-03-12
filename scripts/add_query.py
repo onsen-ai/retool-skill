@@ -152,10 +152,8 @@ def build_sql_query(args):
             attrs.append(('query', query_attr))
         else:
             attrs.append(('query', f'"{query_attr}"'))
-        attrs.append(('resourceDisplayName', f'"{args.resource_name}"'))
         attrs.append(('resourceName', '"REPLACE_WITH_RESOURCE_UUID"'))
         attrs.append(('resourceTypeOverride', '""'))
-        attrs.append(('transformer', '"return data"'))
         attrs.append(('warningCodes', '{[]}'))
     else:
         if action_type in ("BULK_UPDATE_BY_KEY", "BULK_UPSERT_BY_KEY"):
@@ -165,7 +163,6 @@ def build_sql_query(args):
         if action_type in ("DELETE_BY",) and args.confirm:
             attrs.append(('requireConfirmation', '{true}'))
 
-        attrs.append(('resourceDisplayName', f'"{args.resource_name}"'))
         attrs.append(('resourceName', '"REPLACE_WITH_RESOURCE_UUID"'))
         attrs.append(('resourceTypeOverride', '""'))
         attrs.append(('runWhenModelUpdates', '{false}'))
@@ -213,8 +210,6 @@ def build_js_query(args):
         f"{indent}<JavascriptQuery",
         f'{indent}  id="{args.id}"',
         f"{indent}  query={query_attr}",
-        f'{indent}  resourceDisplayName="JavascriptQuery"',
-        f"{indent}  runWhenModelUpdates={{false}}",
     ]
 
     events = []

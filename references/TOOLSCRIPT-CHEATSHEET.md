@@ -103,7 +103,9 @@ app-name/
 | Component | Height | Width |
 |-----------|--------|-------|
 | Text/title | 0.6 | 12 |
-| TextInput/Select/Button/DateRange/Date | 1.0 | 6–12 |
+| TextInput/Select/DateRange/Date | 1.0 | 6–12 |
+| Toolbar Button (alongside inputs) | 0.8 | 2–3 |
+| Standalone Button | 1.0 | 6–12 |
 | TextArea | 1.0 | 12 |
 | Table | 13.2 | 12 |
 | Chat | 17.4 | 12 |
@@ -124,13 +126,24 @@ Component 4: row=2.6,  height=13.2 (table)
 "rightInput": { "row": 0.6, "col": 6, "height": 1, "width": 6 }
 ```
 
-### Filter Bar (4-across)
+### Filter Bar with Toolbar Buttons
+Filters/search go at standard height 1.0. Action buttons use `heightType="auto"`, height 0.8, and start 0.2 rows lower — this visually centers them next to taller inputs. **Order: filters first, then search, then action buttons.**
 ```json
-"search":   { "row": 0.6, "col": 0, "height": 1, "width": 4 },
-"category": { "row": 0.6, "col": 4, "height": 1, "width": 2 },
-"status":   { "row": 0.6, "col": 6, "height": 1, "width": 2 },
-"dateRange":{ "row": 0.6, "col": 8, "height": 1, "width": 2 },
-"resetBtn": { "row": 0.6, "col": 10, "height": 1, "width": 2 }
+"search":    { "row": 0.6, "height": 1, "width": 3 },
+"category":  { "row": 0.6, "col": 3, "height": 1, "width": 3 },
+"status":    { "row": 0.6, "col": 6, "height": 1, "width": 3 },
+"resetBtn":  { "row": 0.8, "col": 9, "height": 0.8 },
+"addBtn":    { "row": 0.8, "col": 10, "height": 0.8 }
+```
+Toolbar buttons MUST have `heightType="auto"` in their RSX — without it, buttons stretch to fill available vertical space and look broken:
+```jsx
+<Button id="addBtn" heightType="auto" text="Add" iconBefore="bold/interface-add-1" />
+```
+
+### Position Defaults
+Omit `row` and `col` when they are 0 — Retool treats these as defaults:
+```json
+"pageTitle": { "height": 0.6, "width": 12 }
 ```
 
 ### Container/Form Internals
@@ -148,6 +161,7 @@ Component 4: row=2.6,  height=13.2 (table)
 ```json
 "form": { "subcontainer": "detailPane", "height": 0.2, "width": 12 }
 ```
+**Do NOT use `enableFullBleed={true}` on Containers inside SplitPaneFrame/DrawerFrame** — it causes content to overflow the pane boundary. Containers fill their parent pane naturally.
 
 ### View Transparency Rule
 **NEVER** create a position entry for a `<View>`. Children of a View use:
@@ -176,6 +190,37 @@ These 9 rules cause "Failed import" errors if violated:
 7. **col + width ≤ 12** for every position entry
 8. **4 required files**: main.rsx, functions.rsx, metadata.json, .positions.json
 9. **All IDs globally unique**; hex formats must be exact (5-char/8-char)
+
+---
+
+## 6b. Attributes to Omit
+
+These attributes are unnecessary — Retool strips them on edit/re-export and they clutter generated code:
+
+| Attribute | Where | Why |
+|-----------|-------|-----|
+| `resourceDisplayName="your-database"` | All queries | Cosmetic label, not used for import |
+| `resourceDisplayName="JavascriptQuery"` | JavascriptQuery | Always implicit |
+| `transformer="return data"` | SELECT queries | It's the default transformer |
+| `runWhenModelUpdates={false}` | JavascriptQuery | Implicit for JS queries |
+| `query=""` | RESTQuery | Empty string is the default |
+| `hidden={false}` | Any component | False is always the default |
+| `showFooter={false}` | Table | False is the default |
+| `row: 0` / `col: 0` | .positions.json | Zero is the default — omit it |
+
+---
+
+## 6c. UI Pitfalls
+
+1. **Toolbar buttons must have `heightType="auto"`** — without it, buttons stretch to fill vertical space and look broken alongside inputs. Use `height: 0.8` in positions (not 1.0) and offset `row` by +0.2 from the filter row to center them visually.
+
+2. **Never use `enableFullBleed={true}` on Containers inside SplitPaneFrame/DrawerFrame** — causes content to overflow the pane. Containers fill their parent naturally.
+
+3. **All SQL goes in lib/ files** — even one-liners like `SELECT COUNT(*) FROM table`. Use `query={include("./lib/file.sql", "string")}`, never inline SQL in the `query` attribute.
+
+4. **Toolbar ordering: filters → search → action buttons** — put filter Select/DateRange components first (left), then TextInput search, then action Buttons (right). This matches standard Retool UX patterns.
+
+5. **Extract ModalFrame to src/ files** — ModalFrame components (especially Setup Guide modals) should live in `src/` via Include, not inline in main.rsx. Keeps main.rsx focused on primary layout.
 
 ---
 
@@ -233,6 +278,8 @@ These 9 rules cause "Failed import" errors if violated:
 <Button id="btn" text="Cancel" styleVariant="outline" marginType="normal">
   <Event id="hex8" event="click" method="hide" params={{}} pluginId="modalId" type="widget" waitMs="0" waitType="debounce" />
 </Button>
+<!-- Toolbar button (alongside filter inputs): -->
+<Button id="addBtn" heightType="auto" iconBefore="bold/interface-add-1" text="Add" marginType="normal" />
 ```
 
 ---
@@ -243,15 +290,15 @@ These 9 rules cause "Failed import" errors if violated:
 ```jsx
 <SqlQueryUnified id="selectItems"
   query={include("./lib/selectItems.sql", "string")}
-  resourceDisplayName="your-database" resourceName="REPLACE_WITH_RESOURCE_UUID"
-  resourceTypeOverride="" transformer="return data" warningCodes={[]} />
+  resourceName="REPLACE_WITH_RESOURCE_UUID"
+  resourceTypeOverride="" warningCodes={[]} />
 ```
 
 ### INSERT
 ```jsx
 <SqlQueryUnified id="insertItem" actionType="INSERT"
   changesetIsObject={true} changesetObject="{{ { ...CreateForm.data } }}"
-  editorMode="gui" resourceDisplayName="your-database" resourceName="REPLACE_WITH_RESOURCE_UUID"
+  editorMode="gui" resourceName="REPLACE_WITH_RESOURCE_UUID"
   resourceTypeOverride="" runWhenModelUpdates={false} tableName="public.items">
   <Event id="hex8" event="success" method="trigger" pluginId="selectItems" type="datasource" waitMs="0" waitType="debounce" />
   <Event id="hex8" event="success" method="close" params={{}} pluginId="createModal" type="widget" waitMs="0" waitType="debounce" />
@@ -262,8 +309,11 @@ These 9 rules cause "Failed import" errors if violated:
 ```jsx
 <SqlQueryUnified id="updateItem" actionType="UPDATE_BY"
   changesetIsObject={true} changesetObject="{{ { ...EditForm.data } }}"
-  editorMode="gui" filterBy={'[{"key":"id","value":"{{ table.selectedRow.id }}","operation":"="}]'}
-  resourceDisplayName="your-database" resourceName="REPLACE_WITH_RESOURCE_UUID"
+  editorMode="gui"
+  filterBy={
+    '[{"key":"id","value":"{{ table.selectedRow.id }}","operation":"="}]'
+  }
+  resourceName="REPLACE_WITH_RESOURCE_UUID"
   resourceTypeOverride="" runWhenModelUpdates={false} tableName="public.items">
   <Event id="hex8" event="success" method="trigger" pluginId="selectItems" type="datasource" waitMs="0" waitType="debounce" />
   <Event id="hex8" event="success" method="selectRow" params={{ ordered: [["key", "{{ table.selectedRow.id }}"]] }} pluginId="table" type="widget" waitMs="100" waitType="debounce" />
@@ -273,9 +323,12 @@ These 9 rules cause "Failed import" errors if violated:
 ### DELETE_BY
 ```jsx
 <SqlQueryUnified id="deleteItem" actionType="DELETE_BY"
-  editorMode="gui" filterBy={'[{"key":"id","value":"{{ table.selectedRow.id }}","operation":"="}]'}
+  editorMode="gui"
+  filterBy={
+    '[{"key":"id","value":"{{ table.selectedRow.id }}","operation":"="}]'
+  }
   requireConfirmation={true} confirmationMessage="Delete **{{ table.selectedRow.name }}**?"
-  resourceDisplayName="your-database" resourceName="REPLACE_WITH_RESOURCE_UUID"
+  resourceName="REPLACE_WITH_RESOURCE_UUID"
   resourceTypeOverride="" runWhenModelUpdates={false} tableName="public.items">
   <Event id="hex8" event="success" method="trigger" pluginId="selectItems" type="datasource" waitMs="0" waitType="debounce" />
   <Event id="hex8" event="success" method="clearSelection" params={{}} pluginId="table" type="widget" waitMs="100" waitType="debounce" />
@@ -286,7 +339,7 @@ These 9 rules cause "Failed import" errors if violated:
 ```jsx
 <SqlQueryUnified id="bulkUpdate" actionType="BULK_UPDATE_BY_KEY"
   bulkUpdatePrimaryKey="id" records="{{ stateVar.value }}"
-  editorMode="gui" resourceDisplayName="your-database" resourceName="REPLACE_WITH_RESOURCE_UUID"
+  editorMode="gui" resourceName="REPLACE_WITH_RESOURCE_UUID"
   resourceTypeOverride="" runWhenModelUpdates={false} tableName="public.items">
   <Event ... />
 </SqlQueryUnified>
@@ -295,18 +348,17 @@ These 9 rules cause "Failed import" errors if violated:
 ### JavascriptQuery
 ```jsx
 <JavascriptQuery id="applyFilters"
-  query={include("./lib/applyFilters.js", "string")}
-  resourceDisplayName="JavascriptQuery" runWhenModelUpdates={false} />
+  query={include("./lib/applyFilters.js", "string")} />
 ```
 
 ### RESTQuery
 ```jsx
 <RESTQuery id="sendToAI"
+  _additionalScope={{ array: ["message"] }}
   body='{"model":"gpt-4o","messages":[...]}'
   bodyType="raw" headers={'[{"key":"Content-Type","value":"application/json"}]'}
   query="chat/completions" type="POST" queryTimeout="60000"
-  resourceDisplayName="your-api" resourceName="REPLACE_WITH_RESOURCE_UUID" resourceTypeOverride=""
-  _additionalScope={{ array: ["message"] }} />
+  resourceName="REPLACE_WITH_RESOURCE_UUID" resourceTypeOverride="" />
 ```
 
 ### SqlTransformQuery
