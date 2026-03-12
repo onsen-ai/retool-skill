@@ -1,79 +1,176 @@
-[
-  {
-    "name": "build-expense-manager",
-    "description": "Build a new Retool app from a description — tests NEW workflow with crud + master-detail patterns",
-    "prompt": "Build me a Retool app for managing employee expenses. I need a table showing all expense reports with columns: employee name, amount, category, status, and date. Users should be able to create new expenses via a modal form, edit existing ones in a side panel, and approve/reject by changing status. Output a zip I can import into Retool.",
-    "expected": {
-      "files": [
-        "main.rsx",
-        "functions.rsx",
-        "metadata.json",
-        ".positions.json"
-      ],
-      "components": [
-        "Table with 5+ columns (employee_name, amount, category, status, date)",
-        "Modal with Form for creating expenses",
-        "SplitPaneFrame detail pane for editing",
-        "Container with Tabs inside SplitPaneFrame",
-        "Form inside detail pane with initialData binding"
-      ],
-      "queries": [
-        "SELECT query for expenses",
-        "INSERT query with form binding",
-        "UPDATE_BY query with filterBy and success events",
-        "DELETE_BY query with requireConfirmation"
-      ],
-      "patterns": [
-        "Event chains: mutate → refresh → UI update",
-        "State variable for tracking context",
-        "Status change via Select with approve/reject options",
-        "All mutations have runWhenModelUpdates={false}"
-      ],
-      "validation": "validate_app.py passes with 0 FAIL",
-      "output": "zip file that can be imported into Retool"
+{
+  "skill_name": "retool-app-builder",
+  "evals": [
+    {
+      "id": 1,
+      "name": "build-expense-manager",
+      "description": "Build a new Retool app from a description — tests NEW workflow with crud + master-detail patterns",
+      "prompt": "Build me a Retool app for managing employee expenses. I need a table showing all expense reports with columns: employee name, amount, category, status, and date. Users should be able to create new expenses via a modal form, edit existing ones in a side panel, and approve/reject by changing status. Output a zip I can import into Retool.",
+      "input_dir": null,
+      "expected_output": "A complete Retool app with CRUD operations, modal form, side panel editing, and status management",
+      "files": [],
+      "expectations": [
+        "A main.rsx file exists in the app directory",
+        "A functions.rsx file exists with SQL queries",
+        "A Table component exists with columns for employee_name, amount, category, status, and date",
+        "A ModalFrame with Form for creating expenses exists",
+        "A SplitPaneFrame detail pane for editing exists",
+        "INSERT query with form binding exists",
+        "UPDATE_BY query with filterBy and success events exists",
+        "DELETE_BY query with requireConfirmation exists",
+        "Event chains: mutate queries trigger refresh of SELECT query on success",
+        "All mutation queries have runWhenModelUpdates={false}",
+        "validate_app.py passes with 0 FAIL",
+        "A zip file is produced that can be imported into Retool"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "add-search-filter",
+      "description": "Add features to an existing CRUD Table App — tests EDIT workflow with client-side filtering",
+      "prompt": "I have a CRUD Table App. Add a search bar and a status filter dropdown above the table. Use client-side setFilterStack filtering instead of SQL WHERE clauses.",
+      "input_dir": "assets/examples/CRUD Table App",
+      "expected_output": "Modified CRUD Table App with search bar and status filter using client-side filtering",
+      "files": [],
+      "expectations": [
+        "A TextInput component exists for search functionality",
+        "A Select component exists for status filtering",
+        "A JavascriptQuery exists that builds filter stack from widget values",
+        "A lib/applyFilters.js file exists",
+        "searchInput and statusFilter are positioned on the same row above the table",
+        "All position entries have col + width <= 12",
+        "validate_app.py passes with 0 FAIL",
+        "A zip file is produced"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "improve-master-detail",
+      "description": "Improve an existing Master-Detail App — tests IMPROVE workflow with production patterns",
+      "prompt": "Review my Retool app and make it production-ready with best practices.",
+      "input_dir": "assets/examples/Master-Detail App",
+      "expected_output": "Improved Master-Detail App with production-ready patterns",
+      "files": [],
+      "expectations": [
+        "Destructive queries have requireConfirmation={true}",
+        "Forms have loading and disableSubmit states",
+        "Row re-selection after update via selectRow event",
+        "Selection cleared after delete if delete exists",
+        "validate_app.py passes with 0 FAIL",
+        "A zip file is produced"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "basic-customer-lookup-table",
+      "description": "Simple customer lookup with table, detail panel, and search — tests foundational table+detail+search pattern",
+      "prompt": "Build me a Retool app called 'Customer Lookup' that connects to our PostgreSQL database resource called 'production_pg'. It should have a table showing customers with columns: customer_id, full_name, email, phone, signup_date, and status (which can be 'active', 'inactive', or 'churned'). When I click a row, a panel on the right side should show the customer details in a read-only key-value format. Add a text input at the top to search customers by name or email. The table should load automatically when the page opens.",
+      "input_dir": null,
+      "expected_output": "A Retool app with a customer table, detail panel, and search input connected to PostgreSQL",
+      "files": [],
+      "expectations": [
+        "A main.rsx file exists in the app directory",
+        "A functions.rsx file exists containing at least one SqlQuery element",
+        "The SqlQuery uses resourceName or resourceDisplayName containing 'production_pg'",
+        "The SqlQuery has a run-on-page-load configuration (no runWhenModelUpdates={false} on SELECT, or explicit trigger)",
+        "The SQL query selects customer_id, full_name, email, phone, signup_date, and status columns",
+        "A Table component exists with Column children for each of the 6 specified columns",
+        "A TextInput component exists for search functionality",
+        "The SQL query includes a WHERE clause that filters by name or email using the search input value",
+        "A KeyValue or Container component exists to display selected row details",
+        "The detail panel references the table's selected row (e.g., table.selectedRow)",
+        "A metadata.json file exists in the app directory"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "order-management-crud-form",
+      "description": "Full CRUD with modal form, delete confirmation, and colored status tags — tests complete CRUD lifecycle",
+      "prompt": "Create a Retool app called 'Order Management' connected to a MySQL resource named 'orders_db'. I need:\n1. A table of orders showing: order_id, customer_name, order_date, total_amount, and status (pending/shipped/delivered/cancelled)\n2. A button labeled 'New Order' above the table that opens a modal with a form to create a new order. The form should have inputs for customer_name (text), order_date (date picker), total_amount (currency input), and status (select dropdown with the four status options)\n3. When I submit the form, it should INSERT into the 'orders' table and then refresh the orders table\n4. Each row in the table should have an action column with a 'Delete' button that runs a DELETE query with a confirmation dialog saying 'Are you sure you want to delete this order?'\n5. The status column in the table should show colored tags: green for delivered, blue for shipped, yellow for pending, red for cancelled",
+      "input_dir": null,
+      "expected_output": "A Retool app with full CRUD for orders including modal form, delete with confirmation, and colored status tags",
+      "files": [],
+      "expectations": [
+        "A Table component exists with columns for order_id, customer_name, order_date, total_amount, and status",
+        "A Button component with text 'New Order' or similar exists",
+        "A ModalFrame component exists in the app",
+        "A Form component exists inside the modal with input components for the four fields",
+        "A Select component exists with options for pending, shipped, delivered, and cancelled",
+        "A Date or DateTime input component exists for order_date",
+        "A SqlQuery for INSERT INTO orders exists in functions.rsx",
+        "The INSERT query's onSuccess event triggers the SELECT/list query to refresh the table",
+        "A SqlQuery for DELETE exists with requireConfirmation or confirmationMessage attribute",
+        "The DELETE query references the selected row's order_id",
+        "The SQL queries use resourceName or resourceDisplayName containing 'orders_db'",
+        "The status column has tag or color mapping configuration for the four statuses"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "it-asset-inventory-dashboard",
+      "description": "Dashboard with stats cards, bar chart, REST API, filtering, and CSV export — tests REST queries and chart components",
+      "prompt": "Build an IT Asset Inventory app with a dashboard section and an asset list:\n\n**Dashboard section at the top:**\n- Show 4 statistic cards: Total Assets, Assets In Use, Assets In Storage, Assets Needing Repair\n- Below that, a bar chart showing asset count grouped by category (laptops, monitors, phones, accessories)\n- The data comes from a REST API at endpoint GET /api/assets (no pre-configured resource — use direct URL)\n\n**Asset List below:**\n- A table with all assets: asset_id, asset_name, category, assigned_to, purchase_date, purchase_price, condition (excellent/good/fair/poor)\n- A select dropdown to filter by category\n- A select dropdown to filter by condition\n- An 'Export CSV' button that triggers the table's CSV download\n\nOutput a zip I can import into Retool.",
+      "input_dir": null,
+      "expected_output": "A Retool app with dashboard stats, bar chart, REST API data, filtered table, and CSV export",
+      "files": [],
+      "expectations": [
+        "At least 4 Statistic or Text components exist for dashboard summary cards",
+        "A PlotlyChart or chart component exists for the bar chart",
+        "A RESTQuery exists in functions.rsx targeting GET /api/assets",
+        "A Table component exists with columns for asset_id, asset_name, category, assigned_to, purchase_date, purchase_price, and condition",
+        "At least two Select components exist for filtering by category and condition",
+        "A Button component exists labeled 'Export CSV' or similar",
+        "The REST query runs on page load",
+        "Filter components have change events that trigger filtering logic",
+        "A .positions.json file exists with entries for all visible components",
+        "validate_app.py passes with 0 FAIL",
+        "A zip file is produced that can be imported into Retool"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "support-ticket-triage-workflow",
+      "description": "Multi-query workflow with split panel, dynamic dropdowns, state tracking — tests complex query chaining and state management",
+      "prompt": "Build a Support Ticket Triage app connected to a PostgreSQL resource called 'support_db'. The app should help our support team review and assign incoming tickets.\n\nLayout:\n- Left side (60% width): A table of unassigned tickets from the 'tickets' table showing: ticket_id, subject, priority (P1/P2/P3/P4), created_at, customer_email, description. The table should sort by priority ascending then created_at ascending by default. Only show tickets where assigned_to IS NULL.\n- Right side (40% width): A detail panel that shows when a ticket is selected. It should display the full description in a text area (read-only), the customer email, and have:\n  - A select dropdown labeled 'Assign To' populated by a query that fetches agent names from a 'support_agents' table\n  - A select dropdown for 'Priority' pre-filled with the selected ticket's current priority\n  - A text area for 'Internal Notes'\n  - A button 'Assign & Update' that updates the ticket's assigned_to and priority, inserts a row into 'ticket_notes' table with the note text, and then refreshes the tickets table\n\nAdd a temporary state variable to track how many tickets have been triaged in the current session (increment by 1 each time 'Assign & Update' is clicked). Show this count at the top of the page as 'Tickets triaged this session: X'.",
+      "input_dir": null,
+      "expected_output": "A Retool app with split-panel ticket triage, multi-query chaining, dynamic dropdowns, and session state tracking",
+      "files": [],
+      "expectations": [
+        "A SqlQuery exists that selects from 'tickets' where assigned_to IS NULL with ORDER BY priority, created_at",
+        "A SqlQuery exists that selects from 'support_agents' to populate the agent dropdown",
+        "A SqlQuery exists for UPDATE on the tickets table setting assigned_to and priority",
+        "A SqlQuery exists for INSERT INTO ticket_notes",
+        "All SQL queries use resourceName or resourceDisplayName containing 'support_db'",
+        "A Table component exists with columns for ticket_id, subject, priority, created_at, customer_email, and description",
+        "A Select component exists for agent assignment that references the support_agents query data",
+        "A State element exists in functions.rsx for tracking triage count",
+        "A Text or Statistic component displays the triage session count",
+        "The Assign & Update button triggers both the UPDATE and INSERT queries",
+        "A TextArea component exists for internal notes input"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "content-moderation-queue-advanced",
+      "description": "Tabbed container with per-tab REST data, PUT actions, JS validation, image rendering — tests upper-bound complexity",
+      "prompt": "Build a Content Moderation Queue app. We have a REST API (no pre-configured resource, use direct URLs).\n\nThe app should have a tabbed container with three tabs: 'Pending Review', 'Approved', 'Rejected'.\n\nEach tab shows a table of content items fetched from different endpoints:\n- Pending: GET /api/content?status=pending\n- Approved: GET /api/content?status=approved\n- Rejected: GET /api/content?status=rejected\n\nColumns in all tables: content_id, title, author, submitted_at, content_type (image/text/video), thumbnail_url\n\nThe thumbnail_url column should render as an image in the table (not raw text).\n\nBelow the Pending tab's table, add a review section that appears only when a row is selected:\n- Show the content title as a header\n- If content_type is 'image', show the full image using an Image component\n- Two buttons side by side: 'Approve' (green) and 'Reject' (red)\n- A text area for 'Moderation Notes' (required before rejecting)\n- Approve calls PUT /api/content/{content_id} with body {\"status\": \"approved\"}\n- Reject calls PUT /api/content/{content_id} with body {\"status\": \"rejected\", \"notes\": \"<notes text>\"}\n- After either action, refresh all three tables\n- Add a JavaScript query that validates the notes field is not empty when rejecting, and shows a notification if empty\n\nAt the top of the app, show three statistic cards with counts: 'Pending', 'Approved', 'Rejected' — derived from the lengths of the three query results.",
+      "input_dir": null,
+      "expected_output": "A Retool app with tabbed content moderation, REST PUT actions, JS validation, and image rendering",
+      "files": [],
+      "expectations": [
+        "A Container component exists with three Views/Tabs for Pending, Approved, and Rejected",
+        "Three RESTQuery elements exist, each targeting /api/content with different status parameters",
+        "Table components exist within each tab, each referencing its corresponding query",
+        "At least one table column is configured to display thumbnail_url as an image",
+        "A RESTQuery for PUT /api/content exists for the approve action",
+        "A RESTQuery for PUT /api/content exists for the reject action with body containing status and notes",
+        "A JavascriptQuery exists that performs validation on the notes field before rejection",
+        "An Image component exists in the review section for displaying content",
+        "Three Statistic or Text components exist showing counts derived from query result lengths",
+        "Button components exist labeled 'Approve' and 'Reject' with color/style attributes",
+        "A TextArea component exists for moderation notes",
+        "validate_app.py passes with 0 FAIL"
+      ]
     }
-  },
-  {
-    "name": "add-search-filter",
-    "description": "Add features to an existing CRUD Table App — tests EDIT workflow with client-side filtering",
-    "prompt": "I have a CRUD Table App. Add a search bar and a status filter dropdown above the table. Use client-side setFilterStack filtering instead of SQL WHERE clauses.",
-    "input_dir": "assets/examples/CRUD Table App",
-    "expected": {
-      "new_components": [
-        "TextInput searchInput with search icon and debounced change event",
-        "Select statusFilter with static options and change event"
-      ],
-      "new_queries": [
-        "JavascriptQuery applyFilters that builds filter stack from widget values"
-      ],
-      "new_files": [
-        "lib/applyFilters.js"
-      ],
-      "positions": [
-        "searchInput and statusFilter on same row above table",
-        "col + width <= 12 for all entries"
-      ],
-      "validation": "validate_app.py passes with 0 FAIL",
-      "output": "modified app directory + zip"
-    }
-  },
-  {
-    "name": "improve-master-detail",
-    "description": "Improve an existing Master-Detail App — tests IMPROVE workflow with production patterns",
-    "prompt": "Review my Retool app and make it production-ready with best practices.",
-    "input_dir": "assets/examples/Master-Detail App",
-    "expected": {
-      "improvements": [
-        "Add requireConfirmation on destructive queries (if any DELETE exists)",
-        "Add loading/disableSubmit states on forms if missing",
-        "Add re-select row after update (selectRow event)",
-        "Add clearSelection after delete if delete exists",
-        "Consider SqlTransformQuery for dropdown options",
-        "Consider client-side setFilterStack for filtering"
-      ],
-      "audit": "Presents improvement checklist findings before making changes",
-      "validation": "validate_app.py passes with 0 FAIL",
-      "output": "improved app directory + zip"
-    }
-  }
-]
+  ]
+}

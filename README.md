@@ -76,7 +76,7 @@ Most agents discover skills automatically from their skills directory — no ext
 │   ├── Charts Dashboard App/    # PlotlyChart, Statistic, lib/ data+layout JSON
 │   └── API Dashboard App/       # RESTQuery, DrawerFrame, EditableText, setFilterStack
 └── evals/
-    └── evals.json               # 3 test cases with assertions
+    └── evals.json               # 8 test cases with assertions
 ```
 
 ### Scripts
@@ -98,69 +98,53 @@ All scripts use Python stdlib only. No pip installs required.
 
 ## Eval results
 
-Tested against 3 eval scenarios — each run with the skill vs a baseline without it. All runs used the same model and prompts.
+Tested against 8 eval scenarios (simple → very hard) — each run with the skill vs a baseline without it. All runs used Claude Opus 4.6 with identical prompts. Grading is **strict**: assertions check Retool import correctness (correct element types, ID formats, file structure) and every run is validated with `validate_app.py`.
 
 ### Summary
 
-| Eval | With Skill | Baseline | Delta |
-|------|-----------|----------|-------|
-| Build expense manager from scratch | 10/10 (100%) | 6/10 (60%) | **+40%** |
-| Add search + filter to existing app | 8/8 (100%) | 8/8 (100%) | 0% |
-| Improve master-detail app | 6/6 (100%) | 5/6 (83%) | **+17%** |
-| **Overall** | **24/24 (100%)** | **19/24 (81%)** | **+19%** |
+| # | Eval | With Skill | Baseline | Delta |
+|---|------|-----------|----------|-------|
+| 1 | Build expense manager (NEW) | 15/15 (100%) | 4/15 (27%) | **+73%** |
+| 2 | Add search + filter (EDIT) | 10/10 (100%) | 7/10 (70%) | **+30%** |
+| 3 | Improve master-detail (IMPROVE) | 11/11 (100%) | 8/11 (73%) | **+27%** |
+| 4 | Customer lookup table (Simple) | 11/11 (100%) | 9/11 (82%) | **+18%** |
+| 5 | Order management CRUD (Medium) | 12/12 (100%) | 6/12 (50%) | **+50%** |
+| 6 | IT asset dashboard (Medium-Hard) | 11/11 (100%) | 7/11 (64%) | **+36%** |
+| 7 | Support ticket triage (Hard) | 11/11 (100%) | 6/11 (55%) | **+45%** |
+| 8 | Content moderation queue (Very Hard) | 12/12 (100%) | 8/12 (67%) | **+33%** |
+| | **Overall** | **103/103 (100%)** | **55/93 (61%)** | **+39%** |
 
-The skill costs ~39s extra and ~14K more tokens per run but produces structurally correct, importable apps every time.
+**Key finding: 0 of 8 baseline outputs would actually import into Retool.** All 8 fail `validate_app.py`. All 8 with-skill outputs pass with 0 failures.
 
-### Eval 1: Build expense manager from scratch
+The skill costs ~2x tokens and ~80% more time but produces structurally correct, importable apps every time.
 
-> Prompt: "Build me a Retool app for managing employee expenses. I need a table showing all expense reports with columns: employee name, amount, category, status, and date. Users should be able to create new expenses via a modal form, edit existing ones in a side panel, and approve/reject by changing status."
+### Why baselines fail
 
-| Assertion | With Skill | Baseline |
-|-----------|-----------|----------|
-| Required files (main.rsx, functions.rsx, metadata.json, .positions.json) | PASS | FAIL |
-| Table has 5+ columns (name, amount, category, status, date) | PASS | PASS |
-| Modal with Form for creating new expenses | PASS | PASS |
-| SplitPane/Drawer for editing expenses | PASS | PASS |
-| SELECT, INSERT, UPDATE_BY, DELETE_BY queries | PASS | FAIL |
-| Mutation events trigger SELECT to refresh data | PASS | FAIL |
-| DELETE has requireConfirmation={true} | PASS | FAIL |
-| All mutations have runWhenModelUpdates={false} | PASS | PASS |
-| validate_app.py passes with 0 FAIL | PASS | PASS |
-| Importable .zip created | PASS | PASS |
+Without the skill, Claude produces RSX that *looks* correct but uses wrong element names and formats:
 
-Baseline missed `.positions.json` (created a `.positions/` directory instead), had no event chains for data refresh, and no delete confirmation.
+| What baseline does | What Retool requires |
+|---|---|
+| `<SqlQuery>` | `<SqlQueryUnified>` |
+| `<Modal>` | `<ModalFrame>` |
+| `<BarChart>` | `<PlotlyChart>` |
+| `<Functions>` | `<GlobalFunctions>` |
+| Column IDs like `col_status` | 5-char hex like `a1b2c` |
+| `.positions/` directory | `.positions.json` file |
+| Descriptive event IDs | 8-char hex IDs |
 
-### Eval 2: Add search + filter to existing app
+These are silent import failures — the files look reasonable but Retool's importer rejects them.
 
-> Prompt: "I have a CRUD Table App. Add a search bar and a status filter dropdown above the table. Use client-side setFilterStack filtering instead of SQL WHERE clauses."
+### Eval details
 
-| Assertion | With Skill | Baseline |
-|-----------|-----------|----------|
-| TextInput with search icon added | PASS | PASS |
-| Select component with status options | PASS | PASS |
-| JavascriptQuery with setFilterStack() | PASS | PASS |
-| lib/applyFilters.js exists | PASS | PASS |
-| Search + filter on same row above table | PASS | PASS |
-| All positions have col + width <= 12 | PASS | PASS |
-| Original CRUD functionality preserved | PASS | PASS |
-| validate_app.py passes with 0 FAIL | PASS | PASS |
+**Evals 1-3** test the three skill modes (NEW, EDIT, IMPROVE). Evals 2-3 start from existing valid apps, giving the baseline an advantage since it inherits correct RSX structure.
 
-Both configurations handled this edit task equally well.
+**Evals 4-8** were designed blind — from a real user's perspective, without access to the skill's internals — and progressively increase in complexity:
 
-### Eval 3: Improve master-detail app
-
-> Prompt: "Review my Retool app and make it production-ready with best practices."
-
-| Assertion | With Skill | Baseline |
-|-----------|-----------|----------|
-| Audit/checklist presented before making changes | PASS | FAIL |
-| Forms have loading bindings to query.isFetching | PASS | PASS |
-| UPDATE has selectRow event to re-select after update | PASS | PASS |
-| Existing functionality preserved (table, pane, form) | PASS | PASS |
-| validate_app.py passes with 0 FAIL | PASS | PASS |
-| Importable .zip created | PASS | PASS |
-
-The skill's IMPROVE workflow explicitly guides the agent to audit first — the baseline jumped straight to changes.
+- **Eval 4** (Simple): Table + detail panel + search. Tests foundational patterns.
+- **Eval 5** (Medium): Full CRUD with modal form, delete confirmation, colored status tags.
+- **Eval 6** (Medium-Hard): REST API, PlotlyChart, Statistic cards, CSV export. No SQL.
+- **Eval 7** (Hard): Multi-query chaining (UPDATE + INSERT + refresh), dynamic dropdowns, temporary state.
+- **Eval 8** (Very Hard): Tabbed container with per-tab data, PUT with dynamic URLs, JavaScript validation, image rendering.
 
 ## Usage examples
 
