@@ -1,4 +1,4 @@
-# retool-app-builder-skill
+# retool-skill
 
 An agent skill for building, editing, and improving importable [Retool](https://retool.com) apps using ToolScript (RSX format). Compatible with [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Cursor](https://cursor.com), [Cline](https://cline.bot), [OpenCode](https://github.com/opencode-ai/opencode), and any coding agent that supports the [skills standard](https://github.com/vercel-labs/skills).
 
