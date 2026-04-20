@@ -22,9 +22,9 @@ All 8 example apps include a **Setup Guide modal** with app-specific wiring inst
 
 ```bash
 # Install for your preferred agent
-npx skills add onsen-ai/retool-app-builder-skill -a claude-code
-npx skills add onsen-ai/retool-app-builder-skill -a cursor
-npx skills add onsen-ai/retool-app-builder-skill -a cline
+npx skills add onsen-ai/retool-skill -a claude-code
+npx skills add onsen-ai/retool-skill -a cursor
+npx skills add onsen-ai/retool-skill -a cline
 ```
 
 ### Manual install
@@ -33,12 +33,12 @@ Clone into your agent's skills directory:
 
 ```bash
 # Example for Claude Code
-git clone https://github.com/onsen-ai/retool-app-builder-skill.git \
-  ~/.claude/skills/retool-app-builder
+git clone https://github.com/onsen-ai/retool-skill.git \
+  ~/.claude/skills/retool-skill
 
 # Example for Cursor
-git clone https://github.com/onsen-ai/retool-app-builder-skill.git \
-  .cursor/skills/retool-app-builder
+git clone https://github.com/onsen-ai/retool-skill.git \
+  .cursor/skills/retool-skill
 ```
 
 Most agents discover skills automatically from their skills directory — no extra configuration needed.

@@ -1,5 +1,5 @@
 ---
-name: retool-app-builder
+name: retool-skill
 description: >
   Build, edit, and improve Retool apps using ToolScript (RSX format).
   Use this skill whenever the user mentions retool, toolscript, RSX,
