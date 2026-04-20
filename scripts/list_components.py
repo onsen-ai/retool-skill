@@ -14,63 +14,208 @@ import sys
 import argparse
 
 # ---------------------------------------------------------------------------
-# RSX regex-based parser (NOT XML — RSX has {true}, {{ expr }}, etc.)
+# RSX tokenizer (NOT XML — RSX has {true}, {{ expr }}, events={[{...}]}, etc.)
+#
+# A regex approach can't handle RSX's arbitrary brace nesting without
+# catastrophic backtracking — real files contain events={[{ordered:[...]}]}
+# prop values 6+ levels deep. Instead, we use a hand-rolled scanner: a simple
+# regex finds tag-name starts, then a character loop consumes the attribute
+# region while tracking string/brace state.
 # ---------------------------------------------------------------------------
 
-# Brace nesting patterns (up to 3 levels deep for {{ map: { src: "..." } }})
-# Inside braces, we skip: quoted strings, nested braces, or non-brace/quote chars
-_QUOTED = r'"[^"]*"|' + r"'[^']*'"  # string literals inside braces
-_BRACE_L0 = r'(?:' + _QUOTED + r'|[^{}\'"]*)*'
-_BRACE_L1 = r'(?:' + _QUOTED + r"|[^{}'\"]" + r'|\{' + _BRACE_L0 + r'\})*'
-_BRACE_L2 = r'(?:' + _QUOTED + r"|[^{}'\"]" + r'|\{' + _BRACE_L1 + r'\})*'
-_BRACE_EXPR = r'\{' + _BRACE_L2 + r'\}'
+_TAG_START_RE = re.compile(r'<(/?)([A-Z][A-Za-z0-9_-]*|[a-z][A-Za-z0-9_]*)')
 
-TAG_PATTERN = re.compile(
-    r'<(/?)([A-Z][A-Za-z0-9_-]*|[a-z][A-Za-z0-9_]*)'
-    r'((?:\s+[a-zA-Z_][\w-]*(?:=(?:"[^"]*"|\'[^\']*\'|' + _BRACE_EXPR + r'))?)*)'
-    r'\s*(/?)>',
-    re.DOTALL
-)
+
+def _skip_quoted(s, i):
+    """s[i] is a quote char. Return index just past the matching closing quote."""
+    q = s[i]
+    n = len(s)
+    j = i + 1
+    while j < n and s[j] != q:
+        if s[j] == '\\' and j + 1 < n:
+            j += 2
+        else:
+            j += 1
+    return j + 1  # past closing quote (or past end if unterminated)
+
+
+def _skip_braced(s, i):
+    """s[i] is '{'. Return index just past the matching '}'."""
+    n = len(s)
+    depth = 1
+    j = i + 1
+    while j < n and depth > 0:
+        c = s[j]
+        if c == '"' or c == "'":
+            j = _skip_quoted(s, j)
+        elif c == '{':
+            depth += 1
+            j += 1
+        elif c == '}':
+            depth -= 1
+            j += 1
+        else:
+            j += 1
+    return j
+
+
+def iter_tags(text):
+    """Yield (is_close, tag, attrs_str, is_self_closing) for every tag.
+
+    attrs_str excludes the trailing '/' on self-closing tags (matches the
+    groups the old regex produced).
+    """
+    n = len(text)
+    i = 0
+    while i < n:
+        m = _TAG_START_RE.search(text, i)
+        if not m:
+            return
+        is_close = bool(m.group(1))
+        tag = m.group(2)
+        j = m.end()
+        attrs_start = j
+        found = False
+        while j < n:
+            c = text[j]
+            if c == '>':
+                attrs_str = text[attrs_start:j]
+                stripped = attrs_str.rstrip()
+                is_self_closing = stripped.endswith('/')
+                if is_self_closing:
+                    cut = attrs_str.rfind('/')
+                    attrs_str = attrs_str[:cut]
+                yield (is_close, tag, attrs_str, is_self_closing)
+                i = j + 1
+                found = True
+                break
+            if c == '"' or c == "'":
+                j = _skip_quoted(text, j)
+            elif c == '{':
+                j = _skip_braced(text, j)
+            else:
+                j += 1
+        if not found:
+            return
 
 
 def extract_attr(attrs_str, attr_name):
-    """Extract attribute value from attribute string."""
-    # String attributes: attr="value"
-    m = re.search(rf'\b{attr_name}="([^"]*)"', attrs_str)
-    if m:
-        return m.group(1)
-    # Single-quoted string attributes: attr='value'
-    m = re.search(rf"\b{attr_name}='([^']*)'", attrs_str)
-    if m:
-        return m.group(1)
-    # Expression attributes: attr={{ expr }} or attr={value}  (2 levels of nesting)
-    pat = r'\b' + re.escape(attr_name) + r'=\{(' + _BRACE_L2 + r')\}'
-    m = re.search(pat, attrs_str)
-    if m:
-        return m.group(1)
-    # Boolean flag (present without value means true)
-    m = re.search(rf'\b{attr_name}\b(?!=)', attrs_str)
-    if m:
-        return True
+    """Extract a single attribute value from an attribute string.
+
+    Returns: string value (for "..." / '...' / {...}), True for bare attrs,
+    or None if not found.
+    """
+    target_len = len(attr_name)
+    n = len(attrs_str)
+    i = 0
+    while i < n:
+        c = attrs_str[i]
+        # Skip past quoted strings and braced exprs so we don't match attr
+        # names that appear inside an earlier attribute's value.
+        if c == '"' or c == "'":
+            i = _skip_quoted(attrs_str, i)
+            continue
+        if c == '{':
+            i = _skip_braced(attrs_str, i)
+            continue
+        if c.isalpha() or c == '_':
+            name_start = i
+            while i < n and (attrs_str[i].isalnum() or attrs_str[i] in '_-'):
+                i += 1
+            name = attrs_str[name_start:i]
+            # Skip whitespace between name and '='
+            k = i
+            while k < n and attrs_str[k].isspace():
+                k += 1
+            if k < n and attrs_str[k] == '=':
+                k += 1
+                while k < n and attrs_str[k].isspace():
+                    k += 1
+                if k >= n:
+                    if name == attr_name:
+                        return True
+                    continue
+                vc = attrs_str[k]
+                if vc == '"' or vc == "'":
+                    end = _skip_quoted(attrs_str, k)
+                    if name == attr_name:
+                        return attrs_str[k + 1:end - 1]
+                    i = end
+                    continue
+                if vc == '{':
+                    end = _skip_braced(attrs_str, k)
+                    if name == attr_name:
+                        return attrs_str[k + 1:end - 1]
+                    i = end
+                    continue
+                # Unquoted value — skip one token
+                end = k
+                while end < n and not attrs_str[end].isspace():
+                    end += 1
+                if name == attr_name:
+                    return attrs_str[k:end]
+                i = end
+                continue
+            else:
+                # Bare attribute (no '=')
+                if name == attr_name:
+                    return True
+                continue
+        i += 1
     return None
 
 
 def extract_all_attrs(attrs_str):
-    """Extract all attributes from attribute string as a dict."""
+    """Parse an attribute string into a dict. Handles arbitrary brace nesting."""
     attrs = {}
-    pattern = (
-        r'\b([a-zA-Z_][\w-]*)(?:=(?:"([^"]*)"|\'([^\']*)\'|\{(' + _BRACE_L2 + r')\}))?'
-    )
-    for m in re.finditer(pattern, attrs_str):
-        name = m.group(1)
-        if m.group(2) is not None:
-            attrs[name] = m.group(2)
-        elif m.group(3) is not None:
-            attrs[name] = m.group(3)
-        elif m.group(4) is not None:
-            attrs[name] = m.group(4)
-        else:
+    n = len(attrs_str)
+    i = 0
+    while i < n:
+        c = attrs_str[i]
+        if c.isspace() or c == ',':
+            i += 1
+            continue
+        if c == '"' or c == "'":
+            # Stray value without a name — skip it.
+            i = _skip_quoted(attrs_str, i)
+            continue
+        if c == '{':
+            i = _skip_braced(attrs_str, i)
+            continue
+        if not (c.isalpha() or c == '_'):
+            i += 1
+            continue
+        name_start = i
+        while i < n and (attrs_str[i].isalnum() or attrs_str[i] in '_-'):
+            i += 1
+        name = attrs_str[name_start:i]
+        # Whitespace before '='
+        while i < n and attrs_str[i].isspace():
+            i += 1
+        if i >= n or attrs_str[i] != '=':
             attrs[name] = True
+            continue
+        i += 1  # past '='
+        while i < n and attrs_str[i].isspace():
+            i += 1
+        if i >= n:
+            attrs[name] = True
+            break
+        vc = attrs_str[i]
+        if vc == '"' or vc == "'":
+            end = _skip_quoted(attrs_str, i)
+            attrs[name] = attrs_str[i + 1:end - 1]
+            i = end
+        elif vc == '{':
+            end = _skip_braced(attrs_str, i)
+            attrs[name] = attrs_str[i + 1:end - 1]
+            i = end
+        else:
+            end = i
+            while end < n and not attrs_str[end].isspace():
+                end += 1
+            attrs[name] = attrs_str[i:end]
+            i = end
     return attrs
 
 
@@ -113,12 +258,7 @@ def parse_rsx(text, app_dir, src_annotation=None):
     stack = []          # list of (Node | section_marker)
     section_stack = []  # tracks current Header/Body/Footer context
 
-    for m in TAG_PATTERN.finditer(text):
-        is_close = bool(m.group(1))
-        tag = m.group(2)
-        attrs_str = m.group(3)
-        is_self_closing = bool(m.group(4))
-
+    for is_close, tag, attrs_str, is_self_closing in iter_tags(text):
         if tag == 'Include' and not is_close:
             src = extract_attr(attrs_str, 'src')
             if src and isinstance(src, str):
@@ -234,12 +374,7 @@ def count_options_in_attrs(rsx_text, component_id):
     count = 0
     depth = 0
     inside = False
-    for m in TAG_PATTERN.finditer(rsx_text):
-        is_close = bool(m.group(1))
-        tag = m.group(2)
-        attrs_str = m.group(3)
-        is_self_closing = bool(m.group(4))
-
+    for is_close, tag, attrs_str, is_self_closing in iter_tags(rsx_text):
         if not is_close and not inside:
             cid = extract_attr(attrs_str, 'id')
             if cid == component_id:
