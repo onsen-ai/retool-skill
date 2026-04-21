@@ -1534,13 +1534,36 @@ Trigger a Retool Workflow.
 **Apps:** Iris Atlas v2
 
 ### `<Function>`
-Reactive computed value (auto-reruns when dependencies change).
+Reactive computed value (auto-reruns when dependencies change). In the Retool UI this is called a **"transformer"**.
 ```jsx
 <Function id="selectedChat"
   funcBody={include("./lib/selectedChat.js", "string")}
   runBehavior="debounced" />
 ```
 Distinct from `<JavascriptQuery>`: uses `funcBody` (not `query`), has `runBehavior`, no transformer/error handling. Always reactive — not triggered manually.
+
+**Critical: reactive references in `funcBody` must be wrapped in `{{ }}`.**
+
+The body of a `<Function>` is evaluated as a Retool expression, not a plain JS script. Any read of a widget, query, or state value needs `{{ }}` around it. This is the opposite of `<JavascriptQuery>`'s `query` attribute, where reactive references are bare.
+
+```js
+// lib/selectedChat.js — attached to a <Function>
+const base = {{ InteractionsTable?.selectedSourceRow }};   // wrapped
+const templates = {{ selectPromptTemplates?.data }};        // wrapped (SQL query ref)
+const variant = {{ selectedVariantCode?.value }} || 'A';    // wrapped (state ref)
+// lodash and other pure helpers are NOT wrapped:
+return _.mergeWith({}, base, overrides);
+```
+
+Contrast with a query body:
+```js
+// lib/onSaveThing.js — attached to a <JavascriptQuery>
+const base = InteractionsTable.selectedSourceRow;   // bare
+const templates = selectPromptTemplates.data;       // bare
+selectedVariantCode.setValue('A');                  // bare
+```
+
+See `TOOLSCRIPT-CHEATSHEET.md` §11 for the full rule table and which refs need wrapping.
 
 ### `<State>`
 Reactive state variable.

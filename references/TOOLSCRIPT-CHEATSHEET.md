@@ -374,6 +374,14 @@ These attributes are unnecessary — Retool strips them on edit/re-export and th
 <State id="myList" value="{{ [] }}" />
 ```
 
+### Function (Transformer)
+```jsx
+<Function id="effectiveRow"
+  funcBody={include("./lib/effectiveRow.js", "string")}
+  runBehavior="debounced" />
+```
+Reactive computed value (a.k.a. "transformer" in the Retool UI). Uses `funcBody` (not `query`). Auto-reruns when its dependencies change — never manually triggered. **See §11 for the `{{ }}` wrapping rule in transformer bodies.**
+
 ### FirebaseQuery
 ```jsx
 <!-- Read documents -->
@@ -471,7 +479,14 @@ These attributes are unnecessary — Retool strips them on edit/re-export and th
 </EditableText>
 <BoundingBox id="tagger" boundingBoxes="{{ row.labels }}" imageUrl="{{ row.image_url }}" />
 <S3Uploader id="uploader" events={[{ ordered: [{ event: "upload" }, { type: "datasource" }, { method: "trigger" }, { pluginId: "refreshFiles" }, { params: { ordered: [] } }, { waitType: "debounce" }, { waitMs: "0" }, { id: "hex8" }] }]} />
+
+<!-- Tags: use value= (NOT data=), plus defaultBackground: "automatic" for auto-colored pills -->
+<Tags id="keyTags" allowWrap={true}
+  style={{ ordered: [{ defaultBackground: "automatic" }] }}
+  value="{{ Object.keys(EditForm.initialData?.var_mapper || {}).sort() }}" />
 ```
+
+**`<Tags>` gotcha:** bind the items to `value=`, not `data=`. `data=` silently renders nothing. For auto-colored pills add `style={{ ordered: [{ defaultBackground: "automatic" }] }}` and let Retool assign colors. Use `colors={{ ... }}` only when you need per-item color control.
 
 ---
 
@@ -503,10 +518,33 @@ These attributes are unnecessary — Retool strips them on edit/re-export and th
 | Button click → clear form | `click` | `clear` | `widget` | formId | |
 | Button click → run inline JS | `click` | `run` | `script` | `""` | `params={{ map: { src: "code" } }}` |
 | Table action → run inline JS | `clickAction` | `run` | `script` | `""` | `params={{ map: { src: "code" } }}` |
+| Table action → trigger query with `currentSourceRow` | `clickAction` | `run` | `script` | `""` | Use inline script: `myQuery.trigger({ additionalScope: { currentSourceRow, i } })` — see below |
 | Table save → trigger query | `save` | `trigger` | `datasource` | saveQueryId | |
 | Table select → show drawer | `selectRow` | `show` | `widget` | drawerFrameId | |
 | Button click → hide drawer | `click` | `setHidden` | `widget` | drawerFrameId | `params={{ ordered: [{ hidden: true }] }}` |
 | Button click → export data | `click` | `exportData` | `util` | `""` | `params={{ ordered: [{ data, fileName, fileType }] }}` |
+
+### Row-scoped `currentSourceRow` in `<Action>` handlers
+
+Inside a table `<Action>`, `currentSourceRow` is injected into the *event's* script scope, but **not** into a triggered query's scope. A direct `method="trigger"` on a query will fail with `currentSourceRow is not defined` the moment the query references it.
+
+**Wrong:**
+```jsx
+<Action id="abc12" label="Delete">
+  <Event event="clickAction" method="trigger" pluginId="onDelete" type="datasource" .../>
+</Action>
+```
+
+**Right:**
+```jsx
+<Action id="abc12" label="Delete">
+  <Event event="clickAction" method="run" type="script" pluginId=""
+    params={{ ordered: [{ src: "onDelete.trigger({additionalScope: { currentSourceRow, i }})" }] }}
+    waitMs="0" waitType="debounce" />
+</Action>
+```
+
+The inline script reads `currentSourceRow` (and `i`, the display index) from its own event scope and forwards them via `additionalScope` so the query body can reference them as bare globals. This is the convention the existing `onInteractionDelete`, `onStepMoveUp`, etc. actions use.
 
 ---
 
@@ -567,6 +605,50 @@ When a query has no DB connected, `query.data` returns an error object (not an a
   query="SELECT DISTINCT department AS label, department AS value FROM {{ selectMembers.data }} ORDER BY department"
   resourceName="SQL Transforms" transformer="return data" />
 ```
+
+---
+
+## 11. Reactive References in `lib/` Files
+
+The rule for referencing widgets, queries, and state from code in `lib/` files **depends on which RSX component the file is attached to.**
+
+| Retool concept | RSX tag | Code attribute | `{{ }}` needed for reactive refs? |
+|---|---|---|---|
+| **Query** | `<JavascriptQuery>`, `<SqlQueryUnified>`, `<RESTQuery>`, `<GraphQLQuery>`, `<S3Query>`, etc. | `query={include(...)}` or SQL body | **No** — runs as plain JS/SQL, reactive globals are auto-injected |
+| **State / variable** | `<State>` | (no code; `value="{{ ... }}"` attribute only) | n/a |
+| **Transformer** | `<Function>` | `funcBody={include(...)}` | **Yes** — body is evaluated as a reactive expression; every widget/query/state read must be wrapped |
+
+### In query bodies — bare references
+```js
+// lib/onSaveThing.js — attached to a <JavascriptQuery>
+const row = InteractionsTable.selectedSourceRow;   // bare, no {{ }}
+const templates = selectPromptTemplates.data;       // bare, no {{ }}
+selectedVariant.setValue('A');                      // bare, no {{ }}
+```
+
+### In transformer bodies — wrapped references
+```js
+// lib/effectiveRow.js — attached to a <Function>
+const row = {{ InteractionsTable?.selectedSourceRow }};   // wrapped
+const templates = {{ selectPromptTemplates?.data }};       // wrapped
+const code = {{ selectedVariant?.value }} || 'A';          // wrapped
+// lodash, JSON, and other pure helpers need NO wrapping:
+const diff = _.isEqual(a, b);                              // bare
+```
+
+**Why:** query bodies run as JS scripts with reactive references injected as locals. Function bodies are evaluated as Retool expressions — the `{{ }}` tells the engine "this substring is a reactive expression; resolve and inject its value."
+
+**Which refs need wrapping in a transformer?** Anything reactive:
+- Widgets: `TableX.selectedRow`, `FormX.data`
+- Queries: `selectFoo.data`, `selectFoo.isFetching` (includes SQL queries like `selectSessionTemplates`)
+- State: `selectedVariant.value`, `isEdited.value`
+- Query triggers: `myQuery.trigger()` (still a reactive ref)
+
+**Which refs do NOT need wrapping?** Pure globals and in-body declarations:
+- `_` (lodash), `JSON`, `Math`, `Array`, `Object`, `Number`, `Set`, `Map`, `Date`
+- `formatDataAsArray`, `moment`, `utils.*` helpers
+- Any `const`/`let` declared earlier in the same transformer
+- `currentSourceRow` / `currentRow` inside row-scoped contexts (these are injected directly)
 
 ---
 
