@@ -258,10 +258,17 @@ STRUCTURAL_TAGS = {
     'Header', 'Body', 'Footer', 'View',
     'Frame',  # Frames with $ prefix
     # Frame-level containers (positioned by Retool layout, not .positions.json)
-    'ModalFrame', 'SplitPaneFrame', 'DrawerFrame',
+    'ModalFrame', 'SplitPaneFrame', 'DrawerFrame', 'SidebarFrame',
     # Query/state elements
     'SqlQueryUnified', 'JavascriptQuery', 'RESTQuery', 'SqlTransformQuery',
-    'State', 'Function', 'OpenAPIQuery', 'S3Query', 'WorkflowRun',
+    'State', 'Function', 'OpenAPIQuery', 'S3Query', 'WorkflowRun', 'SqlQuery',
+    'GraphQLQuery', 'FirebaseQuery', 'RetoolTableQuery', 'SlackQuery',
+    # Non-visual globals (AppStyles defines CSS; DocumentTitle / UrlFragments configure
+    # document meta) — none has a place in the layout grid.
+    'AppStyles', 'DocumentTitle', 'UrlFragments',
+    # ButtonGroup2-Button is a child of ButtonGroup2, positioned by the parent widget's
+    # internal flex layout, not the app-grid .positions.json.
+    'ButtonGroup2-Button',
 }
 
 MUTATION_ACTION_TYPES = {
@@ -379,8 +386,9 @@ def validate_app(app_dir):
         vr.add('PASS', 'Frame-level nesting correct')
 
     # -----------------------------------------------------------------------
-    # 5. Form structure: every Form must have Header + Body + Footer children
-    #    (some Forms set showHeader={false} and skip Header, which is valid)
+    # 5. Form structure: every Form must have a <Body>. Header / Footer are optional —
+    #    Retool renders Forms without them fine, and real exports commonly omit Footer
+    #    when the form has no submit button flow (the parent container provides save).
     # -----------------------------------------------------------------------
     forms = [c for c in all_components if c['tag'] == 'Form']
     form_errors = []
@@ -390,16 +398,11 @@ def validate_app(app_dir):
                      if c['parent_tag'] == 'Form' and c['parent_id'] == form_id]
         child_tags = {c['tag'] for c in children}
 
-        # Body is always required
+        # Body is the only strictly required subtree.
         if 'Body' not in child_tags:
             form_errors.append(f"Form id={form_id} missing <Body>")
 
-        # Footer: required if showFooter is not explicitly false
-        show_footer = get_attr_value(form['attrs'], 'showFooter')
-        if show_footer != 'false' and 'Footer' not in child_tags:
-            form_errors.append(f"Form id={form_id} missing <Footer>")
-
-        # Header: required if showHeader is explicitly true
+        # Header: required if showHeader is explicitly true (respects authored intent).
         show_header = get_attr_value(form['attrs'], 'showHeader')
         if show_header == 'true' and 'Header' not in child_tags:
             form_errors.append(f"Form id={form_id} has showHeader=true but missing <Header>")
@@ -509,17 +512,22 @@ def validate_app(app_dir):
     else:
         vr.add('PASS', 'Grid constraints (col + width <= 12)')
 
-    # 11. Container references in positions point to existing component IDs
+    # 11. Container references in positions point to existing component IDs.
+    #     Frame IDs are conventionally prefixed with `$` (e.g. `$header`, `$main`), but the
+    #     position entries often reference them without the prefix (`header`, `main`). Accept
+    #     both forms to avoid false positives on stock frame references.
     container_ref_errors = []
     all_ids = {c['id'] for c in all_components if c['id']}
+    def _ref_exists(ref):
+        return ref in all_ids or f'${ref}' in all_ids
     for comp_id, pos in positions.items():
         if 'container' in pos:
             ref = pos['container']
-            if ref not in all_ids:
+            if not _ref_exists(ref):
                 container_ref_errors.append(f"{comp_id} references container '{ref}' which doesn't exist")
         if 'subcontainer' in pos:
             ref = pos['subcontainer']
-            if ref not in all_ids:
+            if not _ref_exists(ref):
                 container_ref_errors.append(f"{comp_id} references subcontainer '{ref}' which doesn't exist")
 
     if container_ref_errors:
@@ -528,24 +536,55 @@ def validate_app(app_dir):
         vr.add('PASS', 'Position container references valid')
 
     # -----------------------------------------------------------------------
-    # 13. All IDs globally unique
+    # 13. ID uniqueness — scoped by parent widget for child-role tags.
+    #
+    # Retool enforces uniqueness per parent scope, not globally:
+    #   - `Column` IDs must be unique within a Table, but two Tables can share a Column id.
+    #   - `Option` IDs within a Select/Multiselect.
+    #   - `Action` / `ToolbarButton` within a Table.
+    #   - `View` within a Container's scope.
+    #   - `Event` IDs are scoped to their parent widget.
+    # Top-level widget IDs (everything else) must be globally unique.
     # -----------------------------------------------------------------------
-    id_counts = {}
+    PARENT_SCOPED_TAGS = {'Column', 'Option', 'Action', 'ToolbarButton', 'View', 'Event'}
+
+    # Global uniqueness: only tags NOT in the parent-scoped set.
+    global_id_counts = {}
     for c in all_components:
         cid = c['id']
-        if cid is None:
+        if cid is None or c['tag'] in PARENT_SCOPED_TAGS:
             continue
-        id_counts.setdefault(cid, []).append(c)
+        global_id_counts.setdefault(cid, []).append(c)
 
-    duplicates = {cid: comps for cid, comps in id_counts.items() if len(comps) > 1}
-    if duplicates:
+    # Scoped uniqueness: parent-scoped tags grouped by (parent_id, tag).
+    scoped_id_counts = {}
+    for c in all_components:
+        cid = c['id']
+        if cid is None or c['tag'] not in PARENT_SCOPED_TAGS:
+            continue
+        scope_key = (c.get('parent_id'), c['tag'], cid)
+        scoped_id_counts.setdefault(scope_key, []).append(c)
+
+    duplicates = {
+        cid: comps for cid, comps in global_id_counts.items() if len(comps) > 1
+    }
+    scoped_duplicates = [
+        (scope_key, comps) for scope_key, comps in scoped_id_counts.items() if len(comps) > 1
+    ]
+
+    if duplicates or scoped_duplicates:
         dup_details = []
         for cid, comps in duplicates.items():
             files = set(os.path.basename(c['file']) for c in comps)
             dup_details.append(f"{cid} ({len(comps)}x in {', '.join(files)})")
+        for (parent_id, tag, cid), comps in scoped_duplicates:
+            files = set(os.path.basename(c['file']) for c in comps)
+            dup_details.append(
+                f"{tag} id={cid} ({len(comps)}x within parent={parent_id}, in {', '.join(files)})"
+            )
         vr.add('FAIL', f'Duplicate IDs: {"; ".join(dup_details)}')
     else:
-        vr.add('PASS', 'All IDs unique')
+        vr.add('PASS', 'ID uniqueness (global + per-parent scopes)')
 
     # -----------------------------------------------------------------------
     # 14. Column IDs match ^[0-9a-f]{5}$
@@ -570,12 +609,13 @@ def validate_app(app_dir):
         vr.add('PASS', f'Event IDs are 8-char hex ({len(events)} event{"s" if len(events) != 1 else ""})')
 
     # -----------------------------------------------------------------------
-    # 16. View IDs match ^[0-9a-f]{5}$
-    #     In practice, View IDs use descriptive camelCase names (e.g. detailsView).
-    #     We accept both 5-char hex and descriptive alphanumeric identifiers.
+    # 16. View IDs. The spec permits:
+    #       a) 5-char hex (e.g. '7de0d', '98bb3') — what Retool itself generates
+    #       b) Descriptive alphanumeric (e.g. 'detailsView') — for hand-authored views
+    #     Either form is valid; digit-start is allowed per the hex form.
     # -----------------------------------------------------------------------
     views = [c for c in all_components if c['tag'] == 'View' and c['id']]
-    view_id_pattern = re.compile(r'^[a-zA-Z][a-zA-Z0-9]*$')
+    view_id_pattern = re.compile(r'^([0-9a-f]{5}|[a-zA-Z][a-zA-Z0-9]*)$')
     bad_view_ids = [c['id'] for c in views if not view_id_pattern.match(c['id'])]
     if bad_view_ids:
         vr.add('FAIL', f'Invalid View IDs: {", ".join(bad_view_ids)}')
