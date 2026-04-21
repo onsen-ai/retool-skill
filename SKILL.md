@@ -38,7 +38,7 @@ This skill creates importable Retool apps. Each app is a directory containing RS
 | `add_component.py <dir> --type T --id I ...` | Add component + update positions | Add components with correct layout math. |
 | `add_query.py <dir> --type T --id I ...` | Add query with event chains | Add queries with proper attributes and events. |
 | `extract_component.py <dir> --component ID` | Move subtree to src/ file | When main.rsx gets too large. |
-| `fix_positions.py <dir>` | Recalculate vertical layout | Fix layout after adding/removing components. |
+| `fix_positions.py <dir> [--apply] [--scope S] [--shift-from N --by M]` | Recalculate vertical layout. **Dry-run by default** (add `--apply` to persist). Use `--shift-from` for the "I just inserted content, shift rows below" case. | Fix layout after adding/removing components. |
 | `zip_app.sh <dir>` | Zip for Retool import (runs validate) | Final step — produces the importable zip. |
 | `bundle-apps.sh <app-dir> [output]` | Bundle app into single `.toolscript-bundle` file (dev tool) | Skill development: feed full app context to LLM. `--all` for batch. |
 | `compact_bundles.py` | Strip positions/metadata and truncate large inline data from bundles (dev tool) | Skill development: reduce bundle size for bulk analysis. |
@@ -96,9 +96,12 @@ Read the template example files from `assets/examples/<name>/` before customizin
    ```bash
    python scripts/extract_component.py <dir> --component editModal
    ```
-9. **Fix positions if needed:**
+9. **Fix positions if needed** (dry-run first to preview the diff, then apply):
    ```bash
+   # Preview what would change (no writes)
    python scripts/fix_positions.py <dir>
+   # Persist the changes
+   python scripts/fix_positions.py <dir> --apply
    ```
 10. **Validate:**
     ```bash
@@ -122,10 +125,19 @@ Read the template example files from `assets/examples/<name>/` before customizin
    - Adding queries → `add_query.py`
    - Extracting to src/ → `extract_component.py`
 4. **For complex changes** (modifying existing attributes, rewiring events), edit RSX directly
-5. **Fix positions:**
+5. **Fix positions** (dry-run first, then apply). For mature apps where you're inserting content into an existing scope, use `--shift-from` to bump rows below a cutoff without touching the rest of the layout:
    ```bash
+   # Preview (dry-run is the default)
    python scripts/fix_positions.py <dir>
+
+   # Apply across the whole app (only scopes with overlaps / zero-heights are touched)
+   python scripts/fix_positions.py <dir> --apply
+
+   # Targeted additive shift: "I inserted N units at row X in scope Y"
+   python scripts/fix_positions.py <dir> --scope EditInteractionForm \
+       --shift-from 10.2 --by 3.2 --apply
    ```
+   The script is safe-by-default: without `--apply` it only prints the planned diff. Scopes with no overlaps and no zero-height entries are left untouched, so intentional authored spacing is preserved.
 6. **Validate:**
    ```bash
    python scripts/validate_app.py <dir>
