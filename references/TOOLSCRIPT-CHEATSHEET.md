@@ -235,10 +235,29 @@ These attributes are unnecessary — Retool strips them on edit/re-export and th
 </Container>
 <Form id="MyForm" requireValidation={true} resetAfterSubmit={true} showBody={true} showHeader={true} showFooter={true} padding="12px">
   <Header><Text id="title" value="#### Title" /></Header>
-  <Body>...inputs...</Body>
+  <Body>...inputs with formDataKey=...</Body>
   <Footer><Button id="btn" submit={true} submitTargetId="MyForm" text="Save" /></Footer>
   <Event id="hex8" event="submit" method="trigger" pluginId="queryId" type="datasource" waitMs="0" waitType="debounce" />
 </Form>
+```
+
+**Form `<Header>` / `<Footer>` do NOT collect form data.** Only `<Body>` children with `formDataKey` contribute to `MyForm.data`. A `<Switch formDataKey="flag">` placed in `<Header>` renders fine but its value never appears in `MyForm.data.flag` — the key is silently dropped.
+
+Workaround for inputs that need to live in the header (e.g., a toggle beside the title): bypass `formDataKey` and write directly to your backing state via an inline script on `change`:
+
+```jsx
+<Header>
+  <Switch id="flagToggle"
+    value="{{ myState.value?.is_enabled }}"
+    label="Enabled"
+  >
+    <Event event="change" method="run" type="script" pluginId=""
+      params={{ ordered: [{ src: "const v = myState.value; v.is_enabled = flagToggle.value; myState.setValue(v);" }] }} />
+  </Switch>
+</Header>
+```
+
+```jsx
 <Modal id="myModal" buttonText="Open" closeOnOutsideClick={true} events={[]} modalHeightType="auto">
 <ModalFrame id="myModalFrame" hidden={true} hideOnEscape={true} overlayInteraction={true} showOverlay={true} size="medium">
 <SplitPaneFrame id="myPane" position="right" width="400px" hidden="{{ !table.selectedRow.id }}" _resizeHandleEnabled={true} enableFullBleed={true}>
@@ -255,7 +274,15 @@ These attributes are unnecessary — Retool strips them on edit/re-export and th
   <Action id="hex5" icon="bold/interface-edit-pencil" label="Edit"><Event .../></Action>
   <ToolbarButton id="hex2" icon="bold/interface-text-formatting-filter-2" label="Filter" type="filter" />
 </Table>
+
+<!-- Computed column value: referenceId + valueOverride, NOT key + mapper -->
+<Column id="hex5" format="string" label="Count"
+  referenceId="count"
+  valueOverride="{{ Object.values(currentSourceRow?.var_mapper || {}).length + ' (' + /* ... */ + ')' }}"
+/>
 ```
+
+**`<Column>` computed values gotcha:** table columns that need a computed display value use `referenceId="<field>"` + `valueOverride="{{ <expr> }}"`. Do NOT use `key` + `mapper` for this — `mapper` is a legacy value-to-value alias map and is silently ignored for most formats (`tag`, `decimal`, `string`). Use `referenceId` for the underlying data field (sorting / aggregation / column identity) and `valueOverride` for the actual displayed expression.
 
 ### Inputs
 ```jsx
@@ -373,6 +400,8 @@ These attributes are unnecessary — Retool strips them on edit/re-export and th
 <State id="myFlag" value="{{ false }}" />
 <State id="myList" value="{{ [] }}" />
 ```
+
+**`<State>` gotcha:** the initial value attribute is `value=`, not `defaultValue=`. Writing `defaultValue={true}` is silently ignored by Retool on import and the state defaults to `null`. Always use `value="{{ <expr> }}"`.
 
 ### Function (Transformer)
 ```jsx
